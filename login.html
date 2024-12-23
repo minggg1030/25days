@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>不是想看聖誕樹嗎</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    #main-content {
+      flex: 3;
+      text-align: center;
+    }
+
+    #error-summary {
+      flex: 1;
+      border-left: 2px solid #ccc;
+      padding: 20px;
+      background-color: #fffbe6;
+    }
+
+    h1, h2 {
+      color: #2c3e50;
+    }
+
+    button {
+      background-color: #16a085;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1abc9c;
+    }
+
+    pre {
+      font-size: 20px;
+      color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div id="main-content">
+    <div id="login-page">
+      <button id="start-btn">開始挑戰</button>
+    </div>
+
+    <div id="quiz-page" style="display: none;">
+      <h2>答題挑戰</h2>
+      <div id="question-container"></div>
+      <button id="submit-btn">提交答案</button>
+      <p id="feedback"></p>
+    </div>
+
+    <div id="result-page" style="display: none;">
+      <h1>恭喜你答對了所有問題！</h1>
+      <pre id="tree">
+        🎄
+       🎄🎄
+      🎄🎄🎄
+     🎄🎄🎄🎄
+    🎄🎄🎄🎄🎄
+      </pre>
+    </div>
+  </div>
+
+  <div id="error-summary">
+    <h3>錯誤統計</h3>
+    <p id="total-errors">錯誤次數：0</p>
+    <p id="error-message"></p>
+  </div>
+
+  <script>
+    const questions = [
+      { type: "date", question: "洺安寶貝的生日是？", answer: "2001-10-30" },
+      { type: "date", question: "我們第一次見面的日期？", answer: "2024-11-23" },
+      { type: "text", question: "第一次見面的地點？", answer: "三民運動公園" },
+      { type: "checkbox", question: "洺安寶貝不吃那些肉？", options: ["牛肉", "豬肉", "羊肉", "鯊魚肉", "鴨肉", "蹦蛙"], answer: ["牛肉", "羊肉", "蹦蛙"] },
+      { type: "radio", question: "第二次見面你背甚麼顏色的包包？", options: ["白色", "藍色", "綠色"], answer: "綠色" },
+      { type: "checkbox", question: "我們去竹圍漁港買了哪些東西？", options: ["炒高菜跟綜合魚丸湯", "150元的生魚片", "謝鯰魚", "漁船"], answer: ["炒高菜跟綜合魚丸湯"] },
+    ];
+
+    let currentQuestion = 0;
+    let totalErrors = parseInt(localStorage.getItem("totalErrors")) || 0;
+
+    document.getElementById("start-btn").addEventListener("click", () => {
+      document.getElementById("login-page").style.display = "none";
+      document.getElementById("quiz-page").style.display = "block";
+      updateErrorSummary();
+      loadQuestion();
+    });
+
+    document.getElementById("submit-btn").addEventListener("click", () => {
+      const userAnswer = getUserAnswer();
+      const correctAnswer = questions[currentQuestion].answer;
+
+      if (isAnswerCorrect(userAnswer, correctAnswer)) {
+        currentQuestion++;
+        if (currentQuestion < questions.length) {
+          loadQuestion();
+        } else {
+          document.getElementById("quiz-page").style.display = "none";
+          document.getElementById("result-page").style.display = "block";
+        }
+      } else {
+        totalErrors++;
+        localStorage.setItem("totalErrors", totalErrors); // 保存錯誤次數到 localStorage
+        updateErrorSummary();
+        displayFeedback();
+      }
+    });
+
+    function loadQuestion() {
+      const questionData = questions[currentQuestion];
+      const container = document.getElementById("question-container");
+      container.innerHTML = `<p>${questionData.question}</p>`;
+      document.getElementById("feedback").textContent = "";
+
+      if (questionData.type === "text") {
+        container.innerHTML += `<input type="text" id="answer" placeholder="輸入答案">`;
+      } else if (questionData.type === "date") {
+        container.innerHTML += `<input type="date" id="answer">`;
+      } else if (questionData.type === "radio") {
+        questionData.options.forEach(option => {
+          container.innerHTML += `
+            <label>
+              <input type="radio" name="answer" value="${option}">
+              ${option}
+            </label><br>`;
+        });
+      } else if (questionData.type === "checkbox") {
+        questionData.options.forEach(option => {
+          container.innerHTML += `
+            <label>
+              <input type="checkbox" name="answer" value="${option}">
+              ${option}
+            </label><br>`;
+        });
+      }
+    }
+
+    function getUserAnswer() {
+      const questionData = questions[currentQuestion];
+      if (questionData.type === "text" || questionData.type === "date") {
+        return document.getElementById("answer").value.trim();
+      } else if (questionData.type === "radio") {
+        const selected = document.querySelector('input[name="answer"]:checked');
+        return selected ? selected.value : null;
+      } else if (questionData.type === "checkbox") {
+        return Array.from(document.querySelectorAll('input[name="answer"]:checked')).map(input => input.value);
+      }
+      return null;
+    }
+
+    function isAnswerCorrect(userAnswer, correctAnswer) {
+      if (Array.isArray(correctAnswer)) {
+        return JSON.stringify(userAnswer.sort()) === JSON.stringify(correctAnswer.sort());
+      }
+      return userAnswer === correctAnswer;
+    }
+
+    function updateErrorSummary() {
+      document.getElementById("total-errors").textContent = `錯誤次數：${totalErrors}`;
+      if (totalErrors > 3) {
+        document.getElementById("error-message").textContent = "你錯太多次了，要加油囉！";
+      }
+    }
+
+    function displayFeedback() {
+      const feedbackMessages = [
+        "這題答錯，你就看不到我了！",
+        "看來記到別人了！",
+        "只跟我運動，都忘記哪裡見面了！",
+        "我會吃掉你！",
+        "看來我頭頂綠綠的！",
+        "最後了，給我好好回想！"
+      ];
+      document.getElementById("feedback").textContent = feedbackMessages[currentQuestion] || "答錯了，請再試一次！";
+    }
+
+    // 初始化錯誤數據
+    updateErrorSummary();
+  </script>
+</body>
+</html>
